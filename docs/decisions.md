@@ -112,6 +112,12 @@ Update this file whenever a decision is made or revised; do not let it go stale.
 - **`main` is protected via a ruleset**: PR required, the CI status check required, branches
   must be up to date before merging, force-push and deletion blocked. Required approvals are
   set to 0 — this is a single-maintainer repo; raise it to 1+ if collaborators join.
+- **`line-length` is declared in two places on purpose.** `pyproject.toml` sets ruff's 88
+  explicitly — it is ruff's own default, so the line is redundant for the tool — and
+  `.editorconfig` mirrors it as `max_line_length` under `[*.py]`, so the editor draws the
+  guide that CI enforces. **Change both together.** The limit is set for Python only: no tool
+  checks line length in Markdown or YAML, and Markdown here holds URLs and tables well past
+  400 characters that should not be flagged.
 - **`trailing-whitespace` runs with `--markdown-linebreak-ext=md`.** Markdown encodes a hard
   line break as two trailing spaces, which is why `.editorconfig` sets
   `trim_trailing_whitespace = false` for `*.md`. The hook does not read `.editorconfig`, so
