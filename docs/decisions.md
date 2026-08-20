@@ -23,9 +23,31 @@ Update this file whenever a decision is made or revised; do not let it go stale.
   upper bounds mostly cause unsolvable dependency trees without preventing real breakage —
   and Dependabot needs a lower bound to open update PRs at all, so an unconstrained add still
   gets that coverage. `uv add` writes a lower bound automatically; reproducibility comes from
-  `uv.lock`, not from the range in `pyproject.toml`.
-- **Python 3.14.** Declared supported by `langchain` 1.3.15; picked for maximum support
-  runway over 3.12/3.13.
+  `uv.lock`, not from the range in `pyproject.toml`. **This applies to `requires-python` too**,
+  which is why it reads `>=3.13` and not `>=3.13,<4.0`: the same source is blunt about it —
+  *"Never provide an upper cap to your Python version"* — because a user cannot downgrade their
+  interpreter to satisfy a cap, so the cap turns a hypothetical incompatibility into a certain
+  install failure.
+- **Every package imported directly is declared directly.** `agent.py` imports `langchain_core`
+  and `langgraph`, so both are in `[project.dependencies]` even though `deepagents` already
+  pulls them in. Relying on a transitive dependency means a change in someone else's dependency
+  list breaks the import, and the lockfile gives no warning because nothing was ever declared.
+- **Python 3.13, not 3.14.** 3.14 would give more support runway and `langchain` 1.3.15 does
+  declare it, but it closes the deployment path: `langgraph build` composes the base image tag
+  `langchain/langgraph-api:<python_version>`, and on Docker Hub `:3.11`, `:3.12` and `:3.13`
+  resolve while `:3.14` returns 404. Images for `py3.14` exist only as pre-releases
+  (`0.13.0rc4-py3.14`, `0.14.0.dev9-py3.14`), whereas `py3.13` has stable ones
+  (`0.12.6-py3.13`). The ceiling is the published image, not the CLI — `langgraph_cli/config.py`
+  only enforces `MIN_PYTHON_VERSION = "3.11"`. This is a lag, not a permanent limit; check
+  whether it still applies with:
+
+  ```bash
+  curl -s -o /dev/null -w "%{http_code}\n" \
+    https://hub.docker.com/v2/repositories/langchain/langgraph-api/tags/3.14
+  ```
+
+  `langgraph.json` pins `"python_version": "3.13"` explicitly, because the CLI otherwise
+  defaults to 3.11 and the deployed runtime would silently differ from the local one.
 - **License: MIT.** The repo is meant to be reused as a starting point, not kept private.
 
 ## Agent code

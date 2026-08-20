@@ -3,12 +3,14 @@ name = "lc-deep-agents-seed"
 version = "0.1.0"
 description = "A production-shaped starting point for LangChain deep agents."
 readme = "README.md"
-requires-python = ">=3.14,<4.0"
+requires-python = ">=3.13"
 license = "MIT"
 license-files = ["LICENSE"]
 
 dependencies = [
     "deepagents>=0.7.7",
+    "langchain-core>=1.6.0",
+    "langgraph>=1.2.11",
 ]
 
 [project.scripts]
