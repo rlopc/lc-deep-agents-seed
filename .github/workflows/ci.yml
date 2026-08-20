@@ -5,12 +5,23 @@ on:
     branches: [main]
   pull_request:
 
+# Least privilege: this workflow only ever reads the repository.
+permissions:
+  contents: read
+
+# A superseded push to a pull request should stop burning runner minutes.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.0.1
+      # Pinned by SHA: a tag can be moved to another commit without notice, a SHA cannot.
+      # Dependabot bumps these and rewrites the trailing version comment.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
           enable-cache: true
       # --locked fails if uv.lock does not match pyproject.toml.
