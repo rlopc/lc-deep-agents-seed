@@ -88,13 +88,24 @@ Update this file whenever a decision is made or revised; do not let it go stale.
 
 ## CI / CD and tooling
 
-- **Pin GitHub Actions and pre-commit hooks to exact tags, not floating majors.** Some
-  repositories publish floating major tags (`actions/checkout@v7` is valid); others don't
-  (`astral-sh/setup-uv@v10` does not exist — only `v10.0.0` and `v10.0.1` are published tags).
-  The initial CI run failed on exactly this. Before pinning a version found via a package
-  registry or release page, verify the tag actually exists as a ref
-  (`git ls-remote --tags <repo-url>`) rather than assuming the latest release number is a
-  valid tag.
+- **Pin GitHub Actions by full commit SHA; pin pre-commit hooks to exact tags.** A git tag is a
+  movable label: whoever controls the repository can repoint it at another commit, and nothing
+  in this repository would change. Actions run inside CI with access to the checkout and the
+  `GITHUB_TOKEN`, which is why GitHub documents a full-length SHA as "the only way to use an
+  action as an immutable release" — and why the `tj-actions/changed-files` compromise of March
+  2025 worked by moving a tag. The usual objection is the maintenance burden of hand-updating
+  hashes; it does not apply here, because Dependabot already covers `github-actions` and
+  rewrites the trailing `# v7.0.1` comment on every bump. Pre-commit hooks stay on tags: they
+  run locally, not with repository credentials.
+
+  Two traps when resolving a version to a SHA:
+
+  - Verify the ref exists rather than trusting a release page. `astral-sh/setup-uv@v10` does
+    not exist — only `v10.0.0` and `v10.0.1` are published — and the initial CI run failed on
+    exactly that.
+  - `git ls-remote --tags <url>` prints the *tag object* for annotated tags, not the commit.
+    Dereference with `git ls-remote <url> 'refs/tags/v1.2.3^{}'` and use that SHA; if the
+    dereferenced ref is absent the tag is lightweight and the first SHA is already the commit.
 - **Repository is public.** Two reasons: it's meant to be a reusable template, and GitHub's
   secret scanning push protection is free on public repos but part of a paid tier on private
   ones.
@@ -105,4 +116,16 @@ Update this file whenever a decision is made or revised; do not let it go stale.
   weekly version updates (grouped into one PR for minor/patch bumps); the repo-level
   "Dependabot security updates" setting opens an immediate PR the moment a known vulnerability
   is published, independent of the weekly cycle. Both are enabled, along with "Grouped
-  security updates" for the same reason `dependabot.yml` groups routine bumps.
+  security updates" for the same reason `dependabot.yml` groups routine bumps. Routine updates
+  also sit in a three-day `cooldown`, because yanked releases and same-week regressions are
+  common; security updates ignore cooldown by design. Note that only `default-days` is
+  supported for the `uv` and `github-actions` ecosystems — the `semver-*-days` keys are not.
+- **CI declares `permissions: contents: read` and a `concurrency` group.** The workflow only
+  reads the repository, so it should not inherit whatever the repository default happens to be;
+  and a superseded push to a pull request should stop consuming runner minutes.
+- **CI does not run the pre-commit hooks.** It was considered and rejected: the `ruff-check`
+  hook carries `args: [--fix]`, so in CI it would rewrite files and fail with "files were
+  modified by this hook" instead of a readable lint error. What matters is already covered —
+  `uv sync --locked` does the job of the `uv-lock` hook, and `ruff format --check` covers
+  formatting. The residual gap is trailing whitespace in YAML and Markdown for contributors who
+  never ran `pre-commit install`; that is accepted rather than paid for with a second job.

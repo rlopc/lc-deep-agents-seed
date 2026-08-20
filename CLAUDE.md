@@ -21,10 +21,10 @@ Treat scaffolding decisions here as if a real project would inherit them.
   credentials; `cli.py` is the boundary that checks for them.
 - Anything imported directly is declared directly in `[project.dependencies]`, even when a
   dependency already pulls it in transitively.
-- GitHub Actions and pre-commit hook versions are pinned to exact tags, not floating majors —
-  some repos (e.g. `astral-sh/setup-uv`) don't publish floating major tags. Verify a tag
-  exists (`git ls-remote --tags`) before pinning to it, don't assume the release page's
-  latest-version number is a valid ref.
+- GitHub Actions are pinned by full commit SHA with a trailing `# vX.Y.Z` comment, because a
+  tag can be moved to another commit; pre-commit hooks stay on exact tags, since they run
+  locally. Verify a ref exists (`git ls-remote --tags`) before pinning to it — and dereference
+  annotated tags with `^{}`, or you will pin the tag object instead of the commit.
 
 ## Workflow
 

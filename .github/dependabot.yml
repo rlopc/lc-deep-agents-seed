@@ -5,6 +5,12 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    open-pull-requests-limit: 5
+    # Let a freshly published release sit for a few days before adopting it: yanked releases
+    # and same-week regressions are common. Security updates ignore cooldown by design.
+    # Only default-days applies here; the semver-* keys are not supported for this ecosystem.
+    cooldown:
+      default-days: 3
     groups:
       # One PR for routine bumps; security updates still come separately.
       minor-and-patch:
@@ -15,3 +21,11 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    open-pull-requests-limit: 5
+    cooldown:
+      default-days: 3
+    groups:
+      # Actions are pinned by SHA, so every bump is an opaque hash: grouping keeps them
+      # reviewable together instead of arriving as one PR per action.
+      actions:
+        patterns: ["*"]
