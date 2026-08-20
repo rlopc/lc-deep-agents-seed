@@ -112,6 +112,12 @@ Update this file whenever a decision is made or revised; do not let it go stale.
 - **`main` is protected via a ruleset**: PR required, the CI status check required, branches
   must be up to date before merging, force-push and deletion blocked. Required approvals are
   set to 0 — this is a single-maintainer repo; raise it to 1+ if collaborators join.
+- **`trailing-whitespace` runs with `--markdown-linebreak-ext=md`.** Markdown encodes a hard
+  line break as two trailing spaces, which is why `.editorconfig` sets
+  `trim_trailing_whitespace = false` for `*.md`. The hook does not read `.editorconfig`, so
+  without this argument the two configurations contradicted each other and the hook silently
+  won, stripping intentional line breaks on every commit. Every other file type is still
+  trimmed.
 - **Two independent Dependabot mechanisms, not duplicates:** `dependabot.yml` handles routine
   weekly version updates (grouped into one PR for minor/patch bumps); the repo-level
   "Dependabot security updates" setting opens an immediate PR the moment a known vulnerability
