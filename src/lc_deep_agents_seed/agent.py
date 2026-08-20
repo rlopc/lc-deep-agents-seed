@@ -15,8 +15,8 @@ when they give one, and explain in one sentence what a deep agent is."""
 type DeepAgentGraph = CompiledStateGraph[Any, Any, Any, Any]
 
 
-# A factory, not a module-level graph: building the agent instantiates the model client,
-# which needs credentials. Deferring it keeps imports — and therefore tests — key-free.
+# A factory, not a module-level graph: importing a module should not build anything, and
+# LangGraph calls a factory with the run's config when the graph needs one.
 def make_agent(config: RunnableConfig | None = None) -> DeepAgentGraph:
     return create_deep_agent(
         model=MODEL,

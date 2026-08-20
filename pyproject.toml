@@ -33,7 +33,7 @@ files = ["src", "tests"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-q"
+addopts = "-q --strict-markers --strict-config"
 
 [dependency-groups]
 dev = [
