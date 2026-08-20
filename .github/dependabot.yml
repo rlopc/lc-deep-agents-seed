@@ -1,0 +1,17 @@
+version: 2
+updates:
+  # Python dependencies, resolved through the uv lockfile.
+  - package-ecosystem: "uv"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      # One PR for routine bumps; security updates still come separately.
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  # The actions used by CI are dependencies too, and a common supply-chain hole.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"

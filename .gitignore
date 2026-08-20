@@ -1,0 +1,42 @@
+# Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+credentials/
+
+# Editor autosave files (can mirror .env and leak secrets)
+\#*\#
+.#*
+*~
+
+# Byte-compiled files
+__pycache__/
+*.py[cod]
+
+# Packaging artefacts
+build/
+dist/
+*.egg-info/
+
+# Virtual environment
+.venv/
+
+# Test and coverage artefacts
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Tool caches
+.mypy_cache/
+.ruff_cache/
+
+# Local state written by `langgraph dev`
+.langgraph_api/
+
+# Claude Code: shared config is committed, personal overrides are not
+.claude/settings.local.json

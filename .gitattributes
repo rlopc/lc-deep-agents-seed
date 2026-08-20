@@ -1,0 +1,23 @@
+# Normalize every text file to LF inside the repository, regardless of the
+# contributor's platform.
+* text=auto eol=lf
+
+# Binary formats must never be normalized nor diffed as text.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.pdf  binary
+*.zip  binary
+*.gz   binary
+*.whl  binary
+
+# The lockfile is generated, not authored: collapse it in GitHub diffs and
+# reviews so it does not drown the changes a human actually wrote.
+uv.lock linguist-generated=true
+
+# Use git's built-in language diff drivers so hunk headers name the enclosing
+# function or heading instead of a random preceding line.
+*.py diff=python
+*.md diff=markdown

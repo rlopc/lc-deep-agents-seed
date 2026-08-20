@@ -1,0 +1,9 @@
+{
+  "dependencies": [
+    "."
+  ],
+  "graphs": {
+    "greet": "./src/lc_deep_agents_seed/agent.py:make_agent"
+  },
+  "env": ".env"
+}

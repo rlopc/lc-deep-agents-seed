@@ -1,0 +1,19 @@
+# Editor-level rules, applied before any formatter runs. They restate in a
+# tool-agnostic file what .gitattributes enforces in Git, so editors that do
+# not read Git config still get it right.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.{yaml,yml,json,md}]
+indent_size = 2
+
+[*.md]
+# Markdown encodes a hard line break as two trailing spaces; trimming breaks it.
+trim_trailing_whitespace = false
