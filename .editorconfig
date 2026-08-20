@@ -1,6 +1,6 @@
 # Editor-level rules, applied before any formatter runs. They restate in a
-# tool-agnostic file what .gitattributes enforces in Git, so editors that do
-# not read Git config still get it right.
+# tool-agnostic file what other configuration enforces elsewhere — .gitattributes
+# in Git, ruff in Python — so editors that read neither still get it right.
 root = true
 
 [*]
@@ -17,3 +17,9 @@ indent_size = 2
 [*.md]
 # Markdown encodes a hard line break as two trailing spaces; trimming breaks it.
 trim_trailing_whitespace = false
+
+[*.py]
+# Mirrors ruff's line-length, so the editor shows the limit that CI enforces.
+# Only Python: no tool checks line length in Markdown or YAML, and Markdown
+# holds long URLs and tables that should not be flagged.
+max_line_length = 88
