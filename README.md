@@ -8,7 +8,7 @@ and CI.
 
 ## Requirements
 
-- [uv](https://docs.astral.sh/uv/). It installs Python 3.14 on its own; nothing else is needed.
+- [uv](https://docs.astral.sh/uv/). It installs Python 3.13 on its own; nothing else is needed.
 - An Anthropic API key.
 
 ## Setup
