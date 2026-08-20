@@ -17,8 +17,10 @@ Treat scaffolding decisions here as if a real project would inherit them.
   incompatibility is known. Dependabot needs a lower bound to open PRs; upper bounds mostly
   cause unsolvable environments without preventing real breakage.
 - `create_deep_agent` is called from a factory (`agent.py:make_agent`), never a module-level
-  graph — building it instantiates the model client, which needs credentials. This keeps
-  imports, and therefore tests, key-free.
+  graph — importing a module should not build anything. Building the agent does *not* need
+  credentials; `cli.py` is the boundary that checks for them.
+- Anything imported directly is declared directly in `[project.dependencies]`, even when a
+  dependency already pulls it in transitively.
 - GitHub Actions and pre-commit hook versions are pinned to exact tags, not floating majors —
   some repos (e.g. `astral-sh/setup-uv`) don't publish floating major tags. Verify a tag
   exists (`git ls-remote --tags`) before pinning to it, don't assume the release page's

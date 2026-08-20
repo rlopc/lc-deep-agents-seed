@@ -48,21 +48,43 @@ Update this file whenever a decision is made or revised; do not let it go stale.
 
   `langgraph.json` pins `"python_version": "3.13"` explicitly, because the CLI otherwise
   defaults to 3.11 and the deployed runtime would silently differ from the local one.
+- **The package ships a `py.typed` marker.** It is fully annotated and checked under
+  `mypy --strict`, and it is installed as a package (`langgraph.json` declares
+  `"dependencies": ["."]`). Without the PEP 561 marker every type checker downstream silently
+  ignores those annotations. Hatchling picks the file up automatically.
 - **License: MIT.** The repo is meant to be reused as a starting point, not kept private.
 
 ## Agent code
 
 - **`create_deep_agent` is called from a factory (`agent.py:make_agent`), never built as a
-  module-level graph.** Building the agent instantiates the model client, which needs
-  `ANTHROPIC_API_KEY`. A factory defers that until the agent is actually invoked, so
-  importing the module — and therefore collecting tests — never requires credentials.
-- The factory takes an optional `RunnableConfig` parameter even though it's unused today:
-  `langgraph.json` can point at a graph-building function instead of a compiled graph, and
-  when it does, LangGraph calls it with a config argument. Dropping the parameter breaks
-  `langgraph dev`.
+  module-level graph.** Importing a module should not build anything: a module-level graph
+  makes every import pay for graph assembly, and it fixes the agent's shape at import time,
+  which is exactly what `langgraph.json` pointing at a factory is meant to avoid.
+
+  Note what this does *not* buy, because an earlier version of this file claimed it did:
+  building the agent does **not** require credentials. `langchain-anthropic` defers
+  authentication to request time, so `make_agent()` returns a compiled graph with
+  `ANTHROPIC_API_KEY` unset. Verify with:
+
+  ```bash
+  env -u ANTHROPIC_API_KEY uv run python -c \
+    "from lc_deep_agents_seed.agent import make_agent; make_agent()"
+  ```
+
+  Credentials are the CLI's problem, and `cli.py` checks for them before invoking — otherwise
+  a missing key surfaces as a bare `TypeError` from inside the provider client.
+- The factory keeps an optional `RunnableConfig` parameter even though it's unused today, so
+  that a config-dependent agent stays a one-line change. This is forward-looking, not required:
+  `langgraph_api._factory_utils._classify_factory` accepts factories with zero, one or two
+  parameters, and `invoke_factory` calls a zero-parameter factory with no arguments. Dropping
+  the parameter would not break `langgraph dev`.
 - **CLI entry point is named `greet`**, not the Spanish `hola`: everything published in the
   repository (code, comments, docs, commits) is in English, per house style, even though the
   working conversation is in Spanish.
+- **`MODEL` is a fixed constant, with no environment override.** An override was considered and
+  rejected: nothing consumes it yet, and a configuration path with no consumer is a guess about
+  the future. Add one when a second caller actually needs a different model — and note that
+  `cli.py` hardcodes `ANTHROPIC_API_KEY`, which only stays correct while the model is Anthropic.
 
 ## CI / CD and tooling
 
