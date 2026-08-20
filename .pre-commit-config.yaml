@@ -4,6 +4,9 @@ repos:
     hooks:
       - id: end-of-file-fixer
       - id: trailing-whitespace
+        # Two trailing spaces are a hard line break in Markdown, and .editorconfig
+        # deliberately preserves them; without this the hook would strip them.
+        args: [--markdown-linebreak-ext=md]
       - id: check-merge-conflict
       - id: check-added-large-files
       - id: detect-private-key
