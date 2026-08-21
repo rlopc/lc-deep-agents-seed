@@ -9,6 +9,10 @@ license-files = ["LICENSE"]
 
 dependencies = [
     "deepagents>=0.7.7",
+    # No source file imports this one: agent.py names the provider in a model string,
+    # which init_chat_model resolves to langchain_anthropic.ChatAnthropic at runtime.
+    # A dependency with no import to point at still has to be declared.
+    "langchain-anthropic>=1.6.0",
     "langchain-core>=1.6.0",
     "langgraph>=1.2.11",
 ]
@@ -29,6 +33,7 @@ line-length = 88
 
 [tool.ruff.lint]
 # Errors, pyflakes, import order, naming, modern syntax, bugbears, simplifications.
+# There is no `target-version`: ruff infers it from `requires-python`.
 select = ["E", "F", "W", "I", "N", "UP", "B", "SIM", "RUF"]
 
 [tool.mypy]
@@ -37,12 +42,16 @@ files = ["src", "tests"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-q --strict-markers --strict-config"
+# -ra prints the reason behind every non-passing outcome, so a skip is not just a
+# number in the tally; --strict-markers and --strict-config turn a typo in a marker
+# or a config key into an error instead of something silently ignored.
+addopts = "-q -ra --strict-markers --strict-config"
 
 [dependency-groups]
 dev = [
     "langgraph-cli[inmem]>=0.4.31",
     "mypy>=2.3.1",
+    "pre-commit>=4.6.2",
     "pytest>=9.1.1",
     "ruff>=0.16.3",
 ]

@@ -40,3 +40,11 @@ htmlcov/
 
 # Claude Code: shared config is committed, personal overrides are not
 .claude/settings.local.json
+
+# VS Code: same split. A global ignore rule usually excludes .vscode/ outright, and
+# Git will not descend into an excluded directory, so it has to be re-included before
+# the two shared files can be listed.
+!.vscode/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json

@@ -17,16 +17,24 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
+    # GitHub's own default is 360 minutes, which one hung step would burn in full.
+    timeout-minutes: 15
     steps:
       # Pinned by SHA: a tag can be moved to another commit without notice, a SHA cannot.
       # Dependabot bumps these and rewrites the trailing version comment.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # enable-cache is left at its `auto` default deliberately. Auto caches on
+      # GitHub-hosted runners but opts out of pull_request_target and workflow_run,
+      # where a cache poisoned from a fork would be restored into a job holding a
+      # write-capable token. Forcing `true` buys nothing on the triggers above and
+      # would silently drop that guard the day one of those events is added.
       - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
-        with:
-          enable-cache: true
       # --locked fails if uv.lock does not match pyproject.toml.
       - run: uv sync --locked
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run mypy
+      # No secrets are configured for this workflow, deliberately: the suite has to
+      # pass with no API key and no network, which tests/test_agent.py enforces by
+      # stubbing the agent. A step that starts needing a credential is the regression.
       - run: uv run pytest

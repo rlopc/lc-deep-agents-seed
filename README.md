@@ -18,6 +18,9 @@ uv sync
 cp .env.example .env   # then fill in ANTHROPIC_API_KEY
 ```
 
+Run everything through `uv run`. A bare `python` or `pytest` may pick up a different
+interpreter and report results that have nothing to do with this project.
+
 ## Running
 
 Two entry points, one agent.
@@ -47,8 +50,7 @@ uv run pytest           # tests
 Install the git hooks once, and those same checks run before every commit:
 
 ```bash
-uv tool install pre-commit
-pre-commit install
+uv run pre-commit install
 ```
 
 ## Layout
@@ -57,3 +59,19 @@ pre-commit install
 - `src/lc_deep_agents_seed/cli.py` — the `greet` command.
 - `langgraph.json` — manifest read by `langgraph dev` and by deployments.
 - `tests/` — smoke tests; they never reach the network.
+
+## Known limits
+
+The scaffolding around the agent is production-shaped. The agent itself is not, and these
+gaps are deliberate — a starting point should not pretend to be finished.
+
+1. **No persistence.** `langgraph.json` declares no checkpointer, so conversation state
+   lives in the process and dies with it. Add one before anything needs to remember.
+2. **No authentication and no store.** Both are unset in the manifest. `langgraph dev` is
+   a development server; do not put it in front of anything.
+3. **No tools.** `make_agent` passes `tools=[]`. A deep agent with no tools can only talk,
+   which is enough to prove the wiring and nothing else.
+4. **No observability.** LangSmith arrives as a transitive dependency and stays off unless
+   `LANGSMITH_TRACING` is set, and nothing replaces it. A failing agent leaves no trace.
+5. **The deployment path is unverified.** The manifest validates and the graph factory
+   resolves, but no image has been built or deployed from this repository yet.

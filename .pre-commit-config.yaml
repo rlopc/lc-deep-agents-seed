@@ -9,14 +9,35 @@ repos:
         args: [--markdown-linebreak-ext=md]
       - id: check-merge-conflict
       - id: check-added-large-files
+      # Catch a broken workflow or pyproject here rather than one push later.
+      - id: check-yaml
+      - id: check-toml
+      # Only matches PEM/SSH/PGP key headers — it will NOT catch a pasted
+      # `sk-ant-...` API key. What guards against that is .env being gitignored;
+      # add gitleaks if real secret scanning is wanted.
       - id: detect-private-key
 
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.16.3
+  # ruff runs from the project environment instead of the isolated one pre-commit
+  # would build from a `rev`, so uv.lock stays the only place its version is pinned.
+  # CI and the editor already resolve it that way, and Dependabot has no pre-commit
+  # ecosystem to keep a second pin in step. The cost is that these hooks need a synced
+  # .venv: a stale environment fails the commit instead of quietly running a different
+  # ruff. `--force-exclude` makes ruff honour its own exclude settings even though
+  # pre-commit passes the files explicitly.
+  - repo: local
     hooks:
       - id: ruff-check
-        args: [--fix]
+        name: ruff check
+        entry: uv run ruff check --force-exclude --fix
+        language: system
+        types_or: [python, pyi]
+        require_serial: true
       - id: ruff-format
+        name: ruff format
+        entry: uv run ruff format --force-exclude
+        language: system
+        types_or: [python, pyi]
+        require_serial: true
 
   # Keeps uv.lock in sync with pyproject.toml, so CI never fails on a stale lock.
   - repo: https://github.com/astral-sh/uv-pre-commit
