@@ -28,10 +28,26 @@ Update this file whenever a decision is made or revised; do not let it go stale.
   *"Never provide an upper cap to your Python version"* — because a user cannot downgrade their
   interpreter to satisfy a cap, so the cap turns a hypothetical incompatibility into a certain
   install failure.
-- **Every package imported directly is declared directly.** `agent.py` imports `langchain_core`
-  and `langgraph`, so both are in `[project.dependencies]` even though `deepagents` already
-  pulls them in. Relying on a transitive dependency means a change in someone else's dependency
-  list breaks the import, and the lockfile gives no warning because nothing was ever declared.
+- **Every package depended on directly is declared directly — including the ones with no
+  import.** `agent.py` imports `langchain_core` and `langgraph`, so both are in
+  `[project.dependencies]` even though `deepagents` already pulls them in. Relying on a
+  transitive dependency means a change in someone else's dependency list breaks the import, and
+  the lockfile gives no warning because nothing was ever declared. This rule was first written
+  as "every package *imported* directly", and `langchain-anthropic` slipped through it for
+  exactly that reason: nothing imports it. `agent.py` sets `MODEL = "anthropic:claude-opus-5"`,
+  and `init_chat_model` resolves that prefix to `langchain_anthropic.chat_models.ChatAnthropic`
+  at runtime, so the package is as load-bearing as any import while leaving no static trace to
+  notice it by — which makes declaring it more important, not less. When adding a dependency,
+  ask what breaks if it disappears, not what the import block says.
+- **`pre-commit` is a dev dependency, not a `uv tool install`.** Either is normal practice, but
+  the ruff hooks are `repo: local` and shell out to `uv run ruff`, so the hooks already require
+  a synced `.venv`. Given that, installing pre-commit itself separately adds a second bootstrap
+  step for no isolation that was not already given up: `uv sync` now brings the whole toolchain,
+  and `uv run pre-commit install` is the only setup command.
+- **No `authors` in `[project]`.** `uv init` writes one, and it was removed on purpose. This is
+  a template meant to be copied, and `authors` would travel into the wheel metadata of every
+  project that inherits it, crediting someone who never touched their code. A project that
+  forks this should add its own.
 - **Python 3.13, not 3.14.** 3.14 would give more support runway and `langchain` 1.3.15 does
   declare it, but it closes the deployment path: `langgraph build` composes the base image tag
   `langchain/langgraph-api:<python_version>`, and on Docker Hub `:3.11`, `:3.12` and `:3.13`
@@ -95,8 +111,9 @@ Update this file whenever a decision is made or revised; do not let it go stale.
   action as an immutable release" — and why the `tj-actions/changed-files` compromise of March
   2025 worked by moving a tag. The usual objection is the maintenance burden of hand-updating
   hashes; it does not apply here, because Dependabot already covers `github-actions` and
-  rewrites the trailing `# v7.0.1` comment on every bump. Pre-commit hooks stay on tags: they
-  run locally, not with repository credentials.
+  rewrites the trailing `# v7.0.1` comment on every bump. Third-party pre-commit hooks stay on
+  tags: they run locally, not with repository credentials. The ruff hooks are not pinned here at
+  all — see "ruff runs from the project environment" below.
 
   Two traps when resolving a version to a SHA:
 
@@ -132,12 +149,72 @@ Update this file whenever a decision is made or revised; do not let it go stale.
   also sit in a three-day `cooldown`, because yanked releases and same-week regressions are
   common; security updates ignore cooldown by design. Note that only `default-days` is
   supported for the `uv` and `github-actions` ecosystems — the `semver-*-days` keys are not.
-- **CI declares `permissions: contents: read` and a `concurrency` group.** The workflow only
-  reads the repository, so it should not inherit whatever the repository default happens to be;
-  and a superseded push to a pull request should stop consuming runner minutes.
+- **CI declares `permissions: contents: read`, a `concurrency` group and `timeout-minutes`.**
+  The workflow only reads the repository, so it should not inherit whatever the repository
+  default happens to be; a superseded push to a pull request should stop consuming runner
+  minutes; and the job cap is set because GitHub's default is 360 minutes, which a single hung
+  step would burn in full. The `concurrency` group is keyed on `github.workflow` rather than a
+  hardcoded string, so a second workflow copied from this one cannot land in the same group and
+  cancel unrelated runs.
+- **`setup-uv` keeps its `auto` cache default; `enable-cache: true` was removed.** The
+  documented behaviour of `auto` is "enabled on GitHub-hosted runners except for release, tag
+  push, `pull_request_target`, and `workflow_run` events; disabled on self-hosted runners" —
+  those exclusions exist because such events run with a write-capable token, so a cache poisoned
+  from a fork would be restored into a privileged job. On the triggers this workflow actually
+  declares (`push` to `main`, `pull_request`) `auto` and `true` behave identically, so forcing
+  it bought nothing while removing the guard for whatever trigger a downstream project adds
+  later. Left explained rather than merely deleted, so it is not "helpfully" reinstated.
+- **No secrets are configured for CI.** The suite must pass with no API key and no network
+  access; `tests/test_agent.py` stubs the compiled graph to keep it that way, and `make_agent`
+  is deliberately buildable without credentials (see "Agent code"). A step that starts requiring
+  a credential is not a configuration gap to fill in — it is the regression to investigate.
 - **CI does not run the pre-commit hooks.** It was considered and rejected: the `ruff-check`
   hook carries `args: [--fix]`, so in CI it would rewrite files and fail with "files were
   modified by this hook" instead of a readable lint error. What matters is already covered —
   `uv sync --locked` does the job of the `uv-lock` hook, and `ruff format --check` covers
   formatting. The residual gap is trailing whitespace in YAML and Markdown for contributors who
   never ran `pre-commit install`; that is accepted rather than paid for with a second job.
+- **The committed Claude Code allowlist is read-only, and there is no formatting hook.**
+  `.claude/settings.json` is checked in (`.gitignore` excludes only `settings.local.json`, so
+  personal overrides stay local) and pre-approves inspection commands only: `git` status, diff,
+  log, show and ls-remote; `uv tree`; `uv run` for pytest, ruff, mypy and pre-commit; and
+  `gh pr` view, list and checks.
+  Commands that write are deliberately absent, `uv sync` and `uv lock` included: an allowlist
+  entry removes the confirmation step, so it should only cover actions with no effect to undo.
+  A `PostToolUse` hook running `ruff --fix` on every edited file was considered and rejected:
+  such a hook only fires on the agent's own writes, whereas the `ruff-check` and `ruff-format`
+  pre-commit hooks already cover every file from every author; and the usual shell wrapper ends
+  in `2>/dev/null || true`, which hides a broken environment or a real ruff failure instead of
+  reporting it.
+- **`.vscode/settings.json` and `.vscode/extensions.json` are committed, and `.gitignore` has
+  to fight for it.** A global ignore rule (`~/.config/git/ignore` or the equivalent) commonly
+  excludes `.vscode/`, and Git does not descend into an excluded directory, so re-including one
+  file is not enough — the repository's `.gitignore` re-includes the directory, re-excludes its
+  contents, then lists the two shared files by name. The settings themselves are not personal
+  taste: `ruff.importStrategy: "fromEnvironment"` makes the editor use the ruff in `.venv`
+  rather than the one bundled with the extension, which updates independently and would then
+  disagree with pre-commit and CI; `editor.codeActionsOnSave` runs lint fixes before formatting,
+  the same order as `.pre-commit-config.yaml`, because a fix can leave the file unformatted.
+  `extensions.json` exists because `settings.json` names `charliermarsh.ruff` as the Python
+  formatter, and with the extension missing, format-on-save does nothing and says nothing.
+  This complements `.editorconfig` rather than repeating it: that file covers charset, line
+  endings, indentation and the 88-column guide; these cover which binaries the editor runs.
+- **ruff runs from the project environment (`repo: local`), not from a pinned `rev`.** The
+  conventional setup is `astral-sh/ruff-pre-commit` with `rev: vX.Y.Z`, which builds an isolated
+  environment. That pins ruff a second time, independently of `uv.lock` — and the two pins have
+  no shared bump mechanism, because `dependabot.yml` covers `uv` and `github-actions` while
+  Dependabot supports no pre-commit ecosystem at all; only a manual `pre-commit autoupdate`
+  moves the `rev`. The failure it invites is concrete: Dependabot raises ruff in `uv.lock`, CI
+  and the editor pick the new version up, the hook keeps running the old one, and a commit that
+  passes locally fails CI on a rule the hook never applied. Running `uv run ruff` from the
+  project environment leaves one source of truth for all three. The price is that these hooks
+  need a synced `.venv` and fail without one — accepted, because failing loudly beats silently
+  running a different ruff. This is why `.vscode/settings.json` can claim the editor agrees with
+  both pre-commit and CI: after this change it genuinely does.
+- **`check-yaml` and `check-toml` run locally.** CI deliberately does not run the pre-commit
+  hooks, so a malformed `ci.yml` would otherwise surface as a confusing workflow failure one
+  push later, and a malformed `pyproject.toml` as a broken `uv sync`. Both hooks are cheap.
+  `detect-private-key` sits alongside them but is narrower than it sounds: it matches PEM, SSH
+  and PGP key headers, not a pasted `sk-ant-...` API key. Nothing in this repository scans for
+  those — `.env` being gitignored is the actual protection, and gitleaks is the tool to add if
+  that is not enough.

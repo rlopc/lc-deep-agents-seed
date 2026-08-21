@@ -1,0 +1,18 @@
+{
+  // Use the ruff installed in .venv (pinned by uv.lock) rather than the copy bundled
+  // with the extension, which updates on its own schedule and would then disagree
+  // with the version pre-commit and CI actually run.
+  "ruff.importStrategy": "fromEnvironment",
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.formatOnSave": true,
+    // Same order as .pre-commit-config.yaml: lint fixes first, then formatting,
+    // because a fix can leave the file unformatted.
+    "editor.codeActionsOnSave": {
+      "source.fixAll.ruff": "explicit",
+      "source.organizeImports.ruff": "explicit"
+    }
+  }
+}

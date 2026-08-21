@@ -1,0 +1,5 @@
+{
+  // settings.json names charliermarsh.ruff as the Python formatter; without the
+  // extension installed, format-on-save fails silently instead of reporting anything.
+  "recommendations": ["charliermarsh.ruff", "ms-python.python"]
+}
